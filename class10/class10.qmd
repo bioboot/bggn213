@@ -1,0 +1,168 @@
+---
+title: "Class 10: Structural Bioinformatics (pt. 1)"
+author: "Barry (PID: 911)"
+format: html
+---
+
+# What is in the PDB?
+
+Downloaded a CSV file with current composition data from: https://www.rcsb.org/stats/summary
+
+```{r}
+pdbstats <- read.csv("pdb_stats.csv", row.names = 1)
+head(pdbstats)
+```
+
+```{r}
+pdbstats$X.ray
+```
+
+```{r}
+x <- "2,222"
+as.numeric(x)
+```
+
+```{r}
+as.numeric(pdbstats$X.ray)
+```
+
+```{r}
+x <- "2,222"
+
+as.numeric(gsub(",", "", x))
+```
+
+
+```{r}
+
+commasum <- function(x) {
+  # Remove comma, convert to numeric and sum
+  sum(as.numeric(gsub(",", "", x)))
+}
+```
+
+```{r}
+commasum(pdbstats$X.ray)
+```
+I can now `apply()` this function to my wee table to get all the numbers I need.
+
+```{r}
+round(apply(pdbstats, 2, commasum) / 
+        commasum(pdbstats$Total) * 100, 2)
+```
+
+
+
+
+
+> Q1: What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy.
+
+X.ray: 84.54%. 
+EM: 8.72%. 
+
+> Q2: What proportion of structures in the PDB are protein?
+
+
+> Q3. How does the total number of protein structures in the PDB relate to the total number of protein sequences in UniProt?
+
+```{r}
+186898/250322721 * 100
+
+```
+
+# Visualizing the HIV-1 protease structure
+
+We will use the Mol* (mol-star) viewer at : https://molstar.org/viewer/.
+
+A first image 
+
+![A silly first image that is not that useful yet](1HSG-3.png)
+
+
+![A nice display showing the MK1 ligand and the all important AP 25 catalytic residues](1HSG4.png)
+
+## Working with structures in R
+
+We will use the bio3d package for structural bioinformatics.
+
+```{r}
+library(bio3d)
+
+hiv <- read.pdb("1hsg")
+hiv
+```
+
+```{r}
+head(hiv$atom)
+```
+
+
+```{r}
+aa123(pdbseq(hiv)[25])
+```
+
+# Predicting functional motions of a single structure
+
+```{r}
+adk <- read.pdb("6s36")
+adk
+```
+
+Normal mode analysis (NMA) a bioinformatics method to predict functional motions and large-scale structure changes.
+
+
+```{r}
+m <- nma(adk)
+plot(m)
+```
+
+Make a wee movie (a.k.a "trajectory") of these predicted motions
+```{r}
+mktrj(m, file="adk_movie.pdb")
+```
+
+
+# Quick comparative analysis of structures
+
+Extract sequence and run a BLAST search
+```{r}
+s <- pdbseq(adk)
+blast <- blast.pdb(s)
+plot(blast)
+```
+
+Get the results from BLAST and download all the top hits.
+
+```{r}
+hits <- plot(blast)
+```
+
+```{r}
+hits$pdb.id
+```
+
+```{r}
+# Download releated PDB files
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+```{r}
+# Align releated PDBs
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+
+# PCA of all these ADK structures
+
+```{r}
+# Perform PCA
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+
+```{r}
+mktrj(pc.xray, file="pca_movie.pdb")
+```
+
+

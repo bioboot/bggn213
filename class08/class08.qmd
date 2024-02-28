@@ -1,0 +1,224 @@
+---
+title: "Class 8: Breast Cancer Mini Project"
+author: "Barry (PID: 911)"
+format: pdf
+---
+
+The goal of this mini-project is for you to explore a complete analysis using the unsupervised learning techniques covered in class. You’ll extend what you’ve learned by combining PCA as a preprocessing step to clustering using data that consist of measurements of cell nuclei of human breast masses. 
+
+
+Our data fro today come from FNA of breast tissue. Let's read this data into R.
+
+```{r}
+wisc.df <- read.csv("WisconsinCancer.csv", row.names=1)
+head(wisc.df)
+```
+
+
+> Q. How many observations/samples/patients/rows?
+
+There are `r nrow(wisc.df)` individuals in this dataset.
+
+
+> Q What is in the `$diagnosis` column? How many of each type?
+
+
+```{r}
+sum(wisc.df$diagnosis == "M")
+sum(wisc.df$diagnosis == "B")
+
+```
+
+```{r}
+table(wisc.df$diagnosis)
+```
+
+> Q. How many variables/features in the data are suffixed with _mean?
+
+```{r}
+colnames(wisc.df)
+
+```
+
+```{r}
+length( grep("_mean", colnames(wisc.df), value=TRUE) )
+```
+
+> Q. How many variables/dimensions have we?
+
+```{r}
+ncol(wisc.df)
+
+```
+
+Save the diagnosis for reference later
+
+```{r}
+diagnosis <- as.factor(wisc.df$diagnosis)
+```
+
+and remove or exclude this column form any of our analysis
+```{r}
+wisc.data <- wisc.df[,-1]
+```
+
+
+Let's try clustering this data:
+
+Hierarchical Clustering with `hclust()`
+
+```{r}
+wisc.hc <- hclust( dist(wisc.data) )
+plot(wisc.hc)
+```
+
+# Principal Component Analysis
+
+Let's try PCA on this data. Before doing any analysis like this we should check if our input data needs to be scalled first?
+
+
+
+
+Side-note:
+
+```{r}
+head(mtcars)
+```
+
+
+```{r}
+apply(mtcars, 2, mean)
+```
+
+```{r}
+apply(mtcars, 2, sd)
+```
+
+Let's try a PCA on this car dataset
+
+```{r}
+pc <- prcomp(mtcars)
+summary(pc)
+```
+
+```{r}
+biplot(pc)
+```
+
+```{r}
+pc.scale <- prcomp(mtcars, scale=TRUE)
+summary(pc.scale)
+biplot(pc.scale)
+```
+
+
+## Back to our cancer data set
+
+Do we need to scale this data set?
+Yes we do because the spread is very different 
+
+
+```{r}
+wisc.pr <- prcomp(wisc.data, scale=TRUE)
+```
+
+How well do the PCs capture the variance in the original data?
+
+```{r}
+summary(wisc.pr)
+```
+
+Our main PC score plot (a.k.a. PC plot, PC1 vs PC2, ordeiation plot).
+
+
+```{r}
+attributes(wisc.pr)
+```
+
+```{r}
+biplot(wisc.pr)
+```
+
+We need to build our own plot here:
+```{r}
+plot(wisc.pr$x[,1], wisc.pr$x[,2], col=diagnosis)
+```
+
+Make a nice ggplot version
+
+
+```{r}
+pc <- as.data.frame(wisc.pr$x)
+
+library(ggplot2)
+
+ggplot(pc) +
+  aes(PC1, PC2, col=diagnosis) +
+  geom_point()
+```
+
+## Variance explained
+
+```{r}
+v <- summary(wisc.pr)
+v$importance[2,]
+```
+
+```{r}
+library(factoextra)
+fviz_eig(wisc.pr, addlabels = TRUE)
+```
+
+
+## 4. Combining methods
+
+Here we will use the results of PCA as the input to a clustering analysis.
+
+We start with using 3 PCs
+
+```{r}
+wisc.pr.hclust <- hclust( dist( wisc.pr$x[,1:3] ), method="ward.D2")
+plot(wisc.pr.hclust)
+```
+
+```{r}
+plot(wisc.pr.hclust)
+abline(h=80, col="red")
+```
+
+```{r}
+grps <- cutree(wisc.pr.hclust, h=80)
+table(grps)
+```
+
+```{r}
+table(diagnosis)
+```
+
+
+
+```{r}
+table(grps, diagnosis)
+```
+
+
+
+
+# Prediction
+
+```{r}
+url <- "https://tinyurl.com/new-samples-CSV"
+new <- read.csv(url)
+npc <- predict(wisc.pr, newdata=new)
+```
+
+
+```{r}
+plot(wisc.pr$x[,1:2], col=grps)
+points(npc[,1], npc[,2], col="blue", pch=16, cex=3)
+text(npc[,1], npc[,2], c(1,2), col="white")
+```
+
+
+
+
