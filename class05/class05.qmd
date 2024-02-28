@@ -2,7 +2,7 @@
 title: "Class 5: Data Viz with ggplot"
 author: "Barry (PID: 911)"
 date: 01/24/24
-format: pdf
+format: gfm
 ---
 
 ## Graphics systems in R
